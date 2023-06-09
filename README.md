@@ -1,5 +1,7 @@
 # Open3DSharpWrapper
 
+Open3D wrapper for C#. Main reason for this to be able to manipulate Pointcloud object data directly from your C# projects. Currently Open3D is only implemented for Python and C++ languages.
+
 ## Open3D installation
 In order to build Open3DLibrary project Open3D is needed to be configured for the project.
 Right now project is configured to use Open3D 0.15.1 version.
