@@ -151,5 +151,10 @@ namespace Open3DWrapper
         {
             IPointCloud.Clear(_pointCloudPointer);
         }
+
+        public void Show()
+        {
+            IPointCloud.Show(_pointCloudPointer);
+        }
     }
 }

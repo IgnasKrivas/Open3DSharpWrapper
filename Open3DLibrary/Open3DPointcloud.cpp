@@ -34,11 +34,11 @@ HEAD open3d::geometry::PointCloud* CallingConvention loadPcFile(char* path)
 
 HEAD void CallingConvention DeletePointCloud(open3d::geometry::PointCloud* pc)
 {
-	delete  pc;
+	delete pc;
 }
 HEAD int CallingConvention CountPointCloud(open3d::geometry::PointCloud* pc)
 {
-	return  pc->points_.size();
+	return pc->points_.size();
 }
 HEAD int CallingConvention GetPointCloudH(open3d::geometry::PointCloud* pc)
 {
@@ -88,5 +88,14 @@ HEAD void CallingConvention Pop(open3d::geometry::PointCloud* pc)
 HEAD void CallingConvention Clear(open3d::geometry::PointCloud* pc)
 {
 	pc->Clear();
+}
+
+HEAD void CallingConvention Show(open3d::geometry::PointCloud* pc)
+{
+	std::vector<std::shared_ptr<const open3d::geometry::Geometry>> geometries;
+	std::shared_ptr<const open3d::geometry::Geometry> pcPtr(pc);
+
+	geometries.push_back(pcPtr);
+	open3d::visualization::DrawGeometries(geometries);
 }
 #pragma endregion

@@ -72,5 +72,9 @@ namespace Open3DWrapper
         //Clears all values in the pointcloud
         [DllImport("Open3DLibrary.dll", EntryPoint = "Clear", CharSet = CharSet.Auto)]
         public static extern void Clear(IntPtr PointCloudPointer);
+
+        //Displays pointcloud in a window
+        [DllImport("Open3DLibrary.dll", EntryPoint = nameof(Show), CharSet = CharSet.Auto)]
+        public static extern void Show(IntPtr PointCloudPointer);
     }
 }

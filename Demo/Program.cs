@@ -8,6 +8,7 @@ namespace Demo
         {
             PointCloud pc = new PointCloud("\\high_def0.ply");
             Console.WriteLine(pc.Size);
+            pc.Show();
             Console.ReadLine();
         }
     }
