@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+
+jobs:
+  build-and-test:
+    # Pinned to windows-2022, not windows-latest: windows-latest now points
+    # at a VS2026-based image that doesn't reliably carry the VC++ desktop
+    # workload our v143-toolset native project needs (the same trap hit
+    # locally during development).
+    runs-on: windows-2022
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "6.0.x"
+
+      # Keyed on the props file's contents so bumping Open3DVersion there
+      # automatically invalidates the cache - no separate version to keep in
+      # sync in this workflow.
+      - name: Cache Open3D SDK
+        uses: actions/cache@v4
+        with:
+          path: third_party
+          key: open3d-sdk-${{ hashFiles('Open3DLibrary/Open3DSdk.props') }}
+
+      - name: Find MSBuild
+        id: msbuild
+        shell: pwsh
+        run: |
+          $msbuild = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" `
+            -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 `
+            -find MSBuild\**\Bin\MSBuild.exe
+          if (-not $msbuild) { throw "MSBuild with the VC++ workload was not found on this runner." }
+          echo "path=$msbuild" >> $env:GITHUB_OUTPUT
+
+      - name: Build solution (Debug)
+        shell: pwsh
+        # A leading & on a plain YAML scalar is parsed as an anchor
+        # indicator, not the PowerShell call operator - block-scalar (|) form
+        # sidesteps that entirely since block content isn't re-parsed as YAML.
+        run: |
+          & "${{ steps.msbuild.outputs.path }}" Open3DSharpWrapper.sln -p:Configuration=Debug -p:Platform=x64 -restore -nologo -v:minimal
+
+      - name: Build solution (Release, compile-only sanity check)
+        shell: pwsh
+        run: |
+          & "${{ steps.msbuild.outputs.path }}" Open3DSharpWrapper.sln -p:Configuration=Release -p:Platform=x64 -restore -nologo -v:minimal
+
+      - name: Run tests
+        shell: pwsh
+        run: dotnet test Open3DWrapper.Tests/Open3DWrapper.Tests.csproj -c Debug --no-build --logger "trx;LogFileName=test-results.trx"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: Open3DWrapper.Tests/TestResults/*.trx

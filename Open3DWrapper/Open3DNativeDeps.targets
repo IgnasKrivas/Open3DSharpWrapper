@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Shared by every C# project that P/Invokes into Open3DLibrary.dll (Demo,
+  Open3DWrapper.Tests). Open3DLibrary.vcxproj builds to a neutral
+  ..\build\native\$(Configuration)\ location (not any one consumer's bin
+  folder); this copies what's there into the importing project's own output
+  after it builds.
+-->
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Target Name="CopyOpen3DNativeDeps" AfterTargets="Build">
+    <PropertyGroup>
+      <Open3DNativeBuildDir>$(MSBuildThisFileDirectory)..\build\native\$(Configuration)\</Open3DNativeBuildDir>
+    </PropertyGroup>
+    <ItemGroup Condition="Exists('$(Open3DNativeBuildDir)')">
+      <Open3DNativeFiles Include="$(Open3DNativeBuildDir)**\*.*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(Open3DNativeFiles)"
+          DestinationFolder="$(OutDir)%(RecursiveDir)"
+          SkipUnchangedFiles="true"
+          Condition="Exists('$(Open3DNativeBuildDir)')" />
+  </Target>
+</Project>

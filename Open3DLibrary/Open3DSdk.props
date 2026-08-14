@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Resolves the Open3D SDK location as MSBuild properties instead of hardcoded
+  C:\ paths. Debug configs always resolve to the debug SDK and Release configs
+  to the release SDK - do not change this without re-reading the note in
+  Open3DPointcloud.cpp about the Debug/Release CRT mismatch bug.
+-->
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <!-- Derived directly from this file's own location (not $(SolutionDir) -
+         MSBuild silently defaults SolutionDir to the *project's* directory
+         when a .vcxproj is built standalone rather than via the .sln, which
+         would nest third_party\ inside Open3DLibrary\ instead of the repo
+         root). GetFullPath also collapses the ..\ into a clean absolute path. -->
+    <Open3DRepoRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\'))</Open3DRepoRoot>
+    <Open3DVersion Condition="'$(Open3DVersion)'==''">0.19.0</Open3DVersion>
+    <Open3DThirdPartyRoot>$(Open3DRepoRoot)third_party\</Open3DThirdPartyRoot>
+    <Open3DReleaseRoot>$(Open3DThirdPartyRoot)open3d-devel-windows-amd64-$(Open3DVersion)\</Open3DReleaseRoot>
+    <Open3DDebugRoot>$(Open3DThirdPartyRoot)open3d-devel-windows-amd64-$(Open3DVersion)-dbg\</Open3DDebugRoot>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)'=='Debug'">
+    <Open3DSdkRoot>$(Open3DDebugRoot)</Open3DSdkRoot>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)'!='Debug'">
+    <Open3DSdkRoot>$(Open3DReleaseRoot)</Open3DSdkRoot>
+  </PropertyGroup>
+</Project>
