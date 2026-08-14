@@ -24,8 +24,15 @@ jobs:
       - name: Resolve latest Open3D release
         id: latest
         shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          $release = Invoke-RestMethod -Uri "https://api.github.com/repos/isl-org/Open3D/releases/latest"
+          # Authenticated: unauthenticated GitHub API calls share a 60/hr
+          # rate limit across the whole GitHub Actions runner IP pool, which
+          # gets exhausted easily. The built-in token raises this to 1000/hr
+          # per-repo.
+          $headers = @{ Authorization = "Bearer $env:GH_TOKEN" }
+          $release = Invoke-RestMethod -Uri "https://api.github.com/repos/isl-org/Open3D/releases/latest" -Headers $headers
           $version = $release.tag_name.TrimStart('v')
           Write-Host "Latest Open3D release: $version"
           echo "version=$version" >> $env:GITHUB_OUTPUT
