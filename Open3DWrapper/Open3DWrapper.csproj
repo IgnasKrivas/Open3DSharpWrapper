@@ -7,4 +7,44 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <PackageId>Open3DSharpWrapper</PackageId>
+    <!-- Baseline for the NEXT planned stable release - bump by hand when
+         starting work towards it. Preview packages (published automatically
+         by the weekly Open3D compat-check) build from this version with a
+         -preview.<open3d-version> suffix. Stable publishes (triggered by
+         cutting a GitHub Release) override this with -p:PackageVersion=<tag>
+         at pack time, so the git tag is always authoritative for what
+         actually ships as stable. -->
+    <PackageVersion>1.2.0</PackageVersion>
+    <Authors>Ignas Krivas</Authors>
+    <Description>C# wrapper around Open3D's point cloud processing API (open3d::geometry::PointCloud) - load, transform, filter, and analyze point clouds from .NET. Bundles the Open3D native runtime for win-x64, no separate SDK download needed.</Description>
+    <PackageLicenseFile>LICENSE</PackageLicenseFile>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageProjectUrl>https://github.com/IgnasKrivas/Open3DSharpWrapper</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/IgnasKrivas/Open3DSharpWrapper</RepositoryUrl>
+    <PackageTags>open3d;point-cloud;3d;geometry;pointcloud;wrapper</PackageTags>
+    <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\LICENSE" Pack="true" PackagePath="\" />
+    <None Include="..\README.md" Pack="true" PackagePath="\" />
+    <None Include="Open3DSharpWrapper.targets" Pack="true" PackagePath="build\net6.0\Open3DSharpWrapper.targets" />
+  </ItemGroup>
+
+  <!-- Native payload, from a Release|x64 build of Open3DLibrary (see
+       Open3DSdk.targets' CopyOpen3DRuntimeDeps target for how these land in
+       ..\build\native\Release\). Only present after that build has actually
+       run - packing without one first will simply produce a package with no
+       native payload, so `dotnet pack` for real publishing always needs to
+       follow a Release build in CI/locally. -->
+  <ItemGroup>
+    <None Include="..\build\native\Release\Open3DLibrary.dll" Pack="true" PackagePath="native\" Condition="Exists('..\build\native\Release\Open3DLibrary.dll')" />
+    <None Include="..\build\native\Release\Open3D.dll" Pack="true" PackagePath="native\" Condition="Exists('..\build\native\Release\Open3D.dll')" />
+    <None Include="..\build\native\Release\tbb12.dll" Pack="true" PackagePath="native\" Condition="Exists('..\build\native\Release\tbb12.dll')" />
+    <None Include="..\build\native\Release\resources\**\*.*" Pack="true" PackagePath="native\resources\" Condition="Exists('..\build\native\Release\resources')" />
+  </ItemGroup>
+
 </Project>
