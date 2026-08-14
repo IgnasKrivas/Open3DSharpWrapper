@@ -1,0 +1,116 @@
+name: Publish NuGet (preview)
+
+# Fires after Open3D compatibility check finishes. Only actually publishes
+# if that run succeeded (build+test passed against whatever Open3D release
+# was latest at the time) AND a preview for that exact Open3D version isn't
+# already out - this workflow runs weekly regardless of whether Open3D
+# actually released anything new, so without that check it would republish a
+# near-duplicate preview every week.
+#
+# Uses NuGet Trusted Publishing (OIDC), not a stored API key - requires a
+# Trusted Publishing policy on nuget.org for this exact workflow filename
+# (publish-nuget-preview.yml), separate from the one for
+# publish-nuget-stable.yml.
+on:
+  workflow_run:
+    workflows: ["Open3D compatibility check"]
+    types: [completed]
+
+permissions:
+  id-token: write
+
+jobs:
+  publish-preview:
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: windows-2022
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "6.0.x"
+
+      - name: Resolve latest Open3D release
+        id: latest
+        shell: pwsh
+        run: |
+          # Re-resolved here rather than passed from the triggering run -
+          # this fires immediately after that run's success, so "latest"
+          # will still be the same version; avoids workflow_run artifact-
+          # passing plumbing for a single cheap, side-effect-free API call.
+          $release = Invoke-RestMethod -Uri "https://api.github.com/repos/isl-org/Open3D/releases/latest"
+          $version = $release.tag_name.TrimStart('v')
+          Write-Host "Latest Open3D release: $version"
+          echo "version=$version" >> $env:GITHUB_OUTPUT
+
+      - name: Resolve preview package version
+        id: preview_version
+        shell: pwsh
+        run: |
+          # Read PackageVersion straight from the csproj via regex rather than
+          # `dotnet msbuild -getProperty` - that flag needs MSBuild 17.8+, and
+          # this workflow deliberately pins the older .NET 6 SDK (matching the
+          # project's TargetFramework), whose bundled MSBuild predates it.
+          $csproj = Get-Content Open3DWrapper/Open3DWrapper.csproj -Raw
+          if ($csproj -notmatch '<PackageVersion>([^<]+)</PackageVersion>') {
+            throw "Could not find <PackageVersion> in Open3DWrapper/Open3DWrapper.csproj"
+          }
+          $previewVersion = "$($Matches[1])-preview.${{ steps.latest.outputs.version }}"
+          Write-Host "Preview package version: $previewVersion"
+          echo "version=$previewVersion" >> $env:GITHUB_OUTPUT
+
+      - name: Check whether this preview was already published
+        id: check_published
+        shell: pwsh
+        run: |
+          $packageId = "open3dsharpwrapper"
+          $alreadyPublished = $false
+          try {
+            $existing = Invoke-RestMethod -Uri "https://api.nuget.org/v3-flatcontainer/$packageId/index.json" -ErrorAction Stop
+            if ($existing.versions -contains "${{ steps.preview_version.outputs.version }}") {
+              $alreadyPublished = $true
+            }
+          } catch {
+            # Package not published yet at all, or a transient lookup error -
+            # fail open to "not yet published" rather than silently skipping
+            # what might be the very first preview.
+            Write-Host "Could not check existing versions (may just mean the package doesn't exist yet): $_"
+          }
+          Write-Host "Already published: $alreadyPublished"
+          echo "already_published=$alreadyPublished" >> $env:GITHUB_OUTPUT
+
+      - name: Find MSBuild
+        id: msbuild
+        if: steps.check_published.outputs.already_published == 'False'
+        shell: pwsh
+        run: |
+          $msbuild = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" `
+            -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 `
+            -find MSBuild\**\Bin\MSBuild.exe
+          if (-not $msbuild) { throw "MSBuild with the VC++ workload was not found on this runner." }
+          echo "path=$msbuild" >> $env:GITHUB_OUTPUT
+
+      - name: Build solution (Release) against latest Open3D
+        id: release_build
+        if: steps.check_published.outputs.already_published == 'False'
+        shell: pwsh
+        run: |
+          & "${{ steps.msbuild.outputs.path }}" Open3DSharpWrapper.sln -p:Configuration=Release -p:Platform=x64 -p:Open3DVersion=${{ steps.latest.outputs.version }} -restore -nologo -v:minimal
+
+      - name: Pack preview package
+        if: steps.release_build.outcome == 'success'
+        shell: pwsh
+        run: dotnet pack Open3DWrapper/Open3DWrapper.csproj -c Release -p:PackageVersion=${{ steps.preview_version.outputs.version }} -o nupkgs --no-build
+
+      - name: NuGet login (Trusted Publishing)
+        if: steps.release_build.outcome == 'success'
+        id: nuget_login
+        uses: NuGet/login@v1
+        with:
+          user: ignask
+
+      - name: Push preview package to NuGet
+        if: steps.release_build.outcome == 'success'
+        shell: pwsh
+        run: dotnet nuget push nupkgs\*.nupkg --api-key ${{ steps.nuget_login.outputs.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate

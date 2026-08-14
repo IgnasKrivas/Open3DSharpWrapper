@@ -5,9 +5,17 @@ name: Publish NuGet (stable)
 # Open3D version is currently pinned in Open3DLibrary/Open3DSdk.props (the
 # officially-supported version), packs with the release tag as the exact
 # NuGet version, and publishes.
+#
+# Uses NuGet Trusted Publishing (OIDC), not a stored API key - requires a
+# Trusted Publishing policy on nuget.org for this exact workflow filename
+# (publish-nuget-stable.yml), separate from the one for
+# publish-nuget-preview.yml.
 on:
   release:
     types: [published]
+
+permissions:
+  id-token: write
 
 jobs:
   publish:
@@ -19,13 +27,6 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "6.0.x"
-
-      - name: Verify NUGET_API_KEY is configured
-        shell: pwsh
-        run: |
-          if ("${{ secrets.NUGET_API_KEY }}" -eq "") {
-            throw "NUGET_API_KEY secret is not set - add it in repo Settings > Secrets and variables > Actions before publishing a release."
-          }
 
       - name: Resolve package version from tag
         id: version
@@ -64,6 +65,12 @@ jobs:
         shell: pwsh
         run: dotnet pack Open3DWrapper/Open3DWrapper.csproj -c Release -p:PackageVersion=${{ steps.version.outputs.version }} -o nupkgs --no-build
 
+      - name: NuGet login (Trusted Publishing)
+        id: nuget_login
+        uses: NuGet/login@v1
+        with:
+          user: ignask
+
       - name: Push to NuGet
         shell: pwsh
-        run: dotnet nuget push nupkgs\*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+        run: dotnet nuget push nupkgs\*.nupkg --api-key ${{ steps.nuget_login.outputs.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
