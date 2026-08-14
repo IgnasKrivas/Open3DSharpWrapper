@@ -23,4 +23,10 @@
     <ProjectReference Include="..\Open3DWrapper\Open3DWrapper.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="high_def0.ply">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>

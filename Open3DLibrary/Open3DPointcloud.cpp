@@ -21,7 +21,7 @@ HEAD open3d::geometry::PointCloud* CallingConvention loadPcFile(char* path)
 {
 	open3d::geometry::PointCloud* cloud = new open3d::geometry::PointCloud;
 
-	if (open3d::io::ReadPointCloud(path, *cloud) == -1)
+	if (!open3d::io::ReadPointCloud(path, *cloud))
 	{
 		cloud->points_.push_back(Eigen::Vector3d(0, 0, 0));
 		return cloud;
