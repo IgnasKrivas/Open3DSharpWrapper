@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Packed into the NuGet package as build\net6.0\Open3DSharpWrapper.targets -
+  the filename must match the PackageId exactly for NuGet to auto-import this
+  into every consuming project.
+
+  Copies Open3D's native runtime (Open3DLibrary.dll, Open3D.dll, tbb12.dll,
+  resources\) from this package's own installed location into the consuming
+  project's output. Deliberately NOT using NuGet's runtimes/{rid}/native/
+  convention for this - that convention flattens subfolders on copy
+  (confirmed: https://github.com/NuGet/Home/issues/7698), which would break
+  Open3D's Filament-based visualizer, which needs resources\ as a real
+  subfolder next to Open3D.dll. This mirrors Open3DNativeDeps.targets, which
+  does the same copy for in-repo consumers (Demo, Open3DWrapper.Tests), just
+  reading from the package's own payload instead of a relative repo path.
+-->
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Target Name="CopyOpen3DSharpWrapperNativeAssets" AfterTargets="Build">
+    <PropertyGroup>
+      <_Open3DSharpWrapperNativeDir>$(MSBuildThisFileDirectory)..\..\native\</_Open3DSharpWrapperNativeDir>
+    </PropertyGroup>
+    <ItemGroup Condition="Exists('$(_Open3DSharpWrapperNativeDir)')">
+      <_Open3DSharpWrapperNativeFiles Include="$(_Open3DSharpWrapperNativeDir)**\*.*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_Open3DSharpWrapperNativeFiles)"
+          DestinationFolder="$(OutDir)%(RecursiveDir)"
+          SkipUnchangedFiles="true"
+          Condition="Exists('$(_Open3DSharpWrapperNativeDir)')" />
+  </Target>
+</Project>

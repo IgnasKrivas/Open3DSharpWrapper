@@ -1,0 +1,69 @@
+name: Publish NuGet (stable)
+
+# Triggered by publishing a GitHub Release - the same manual gate already
+# used to ship v1.1.0, no new process to learn. Builds against whatever
+# Open3D version is currently pinned in Open3DLibrary/Open3DSdk.props (the
+# officially-supported version), packs with the release tag as the exact
+# NuGet version, and publishes.
+on:
+  release:
+    types: [published]
+
+jobs:
+  publish:
+    runs-on: windows-2022
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "6.0.x"
+
+      - name: Verify NUGET_API_KEY is configured
+        shell: pwsh
+        run: |
+          if ("${{ secrets.NUGET_API_KEY }}" -eq "") {
+            throw "NUGET_API_KEY secret is not set - add it in repo Settings > Secrets and variables > Actions before publishing a release."
+          }
+
+      - name: Resolve package version from tag
+        id: version
+        shell: pwsh
+        run: |
+          $tag = "${{ github.event.release.tag_name }}"
+          $version = $tag.TrimStart('v')
+          Write-Host "Package version: $version"
+          echo "version=$version" >> $env:GITHUB_OUTPUT
+
+      - name: Find MSBuild
+        id: msbuild
+        shell: pwsh
+        run: |
+          $msbuild = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" `
+            -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 `
+            -find MSBuild\**\Bin\MSBuild.exe
+          if (-not $msbuild) { throw "MSBuild with the VC++ workload was not found on this runner." }
+          echo "path=$msbuild" >> $env:GITHUB_OUTPUT
+
+      # Belt-and-suspenders: ci.yml already gates every push/PR, but this
+      # re-validates the exact commit being released before it becomes an
+      # immutable public package.
+      - name: Build solution (Debug) and run tests
+        shell: pwsh
+        run: |
+          & "${{ steps.msbuild.outputs.path }}" Open3DSharpWrapper.sln -p:Configuration=Debug -p:Platform=x64 -restore -nologo -v:minimal
+          dotnet test Open3DWrapper.Tests/Open3DWrapper.Tests.csproj -c Debug --no-build
+
+      - name: Build solution (Release)
+        shell: pwsh
+        run: |
+          & "${{ steps.msbuild.outputs.path }}" Open3DSharpWrapper.sln -p:Configuration=Release -p:Platform=x64 -restore -nologo -v:minimal
+
+      - name: Pack
+        shell: pwsh
+        run: dotnet pack Open3DWrapper/Open3DWrapper.csproj -c Release -p:PackageVersion=${{ steps.version.outputs.version }} -o nupkgs --no-build
+
+      - name: Push to NuGet
+        shell: pwsh
+        run: dotnet nuget push nupkgs\*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
