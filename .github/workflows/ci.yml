@@ -18,7 +18,15 @@ jobs:
 
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: "10.0.x"
+          # Both SDKs, not just 10.0.x: Open3DWrapper.csproj multi-targets
+          # net8.0;net10.0 - see the longer note in publish-nuget-stable.yml,
+          # which is where this was actually caught (a `dotnet pack` step
+          # failing to resolve the net8.0 targeting pack even though the
+          # build itself, via VS2022's MSBuild, succeeded fine). Applied
+          # here too for consistency even though this workflow doesn't pack.
+          dotnet-version: |
+            8.0.x
+            10.0.x
 
       # Keyed on the props file's contents so bumping Open3DVersion there
       # automatically invalidates the cache - no separate version to keep in

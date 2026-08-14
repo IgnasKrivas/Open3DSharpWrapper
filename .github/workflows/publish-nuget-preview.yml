@@ -29,7 +29,16 @@ jobs:
 
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: "10.0.x"
+          # Both SDKs, not just 10.0.x: Open3DWrapper.csproj multi-targets
+          # net8.0;net10.0, and `dotnet pack`/`dotnet nuget push` (the plain
+          # dotnet CLI, DOTNET_ROOT-rooted - distinct from VS2022's own
+          # bundled MSBuild used for the actual build) needs the net8.0
+          # targeting pack physically present to resolve that target; it
+          # doesn't get it for free just because the build succeeded via a
+          # different toolchain.
+          dotnet-version: |
+            8.0.x
+            10.0.x
 
       - name: Resolve latest Open3D release
         id: latest
