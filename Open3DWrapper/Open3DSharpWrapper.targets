@@ -1,8 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Packed into the NuGet package as build\net6.0\Open3DSharpWrapper.targets -
-  the filename must match the PackageId exactly for NuGet to auto-import this
-  into every consuming project.
+  Packed into the NuGet package as build\Open3DSharpWrapper.targets - the
+  filename must match the PackageId exactly for NuGet to auto-import this
+  into every consuming project. Deliberately at build\ directly (not
+  build\{tfm}\) since this target has no framework-specific logic - the
+  TFM-agnostic path auto-imports for every target framework the consumer
+  uses, not just whichever ones this package itself happens to target.
 
   Copies Open3D's native runtime (Open3DLibrary.dll, Open3D.dll, tbb12.dll,
   resources\) from this package's own installed location into the consuming
@@ -17,7 +20,10 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Target Name="CopyOpen3DSharpWrapperNativeAssets" AfterTargets="Build">
     <PropertyGroup>
-      <_Open3DSharpWrapperNativeDir>$(MSBuildThisFileDirectory)..\..\native\</_Open3DSharpWrapperNativeDir>
+      <!-- One level up from build\ to package root, then into native\ -
+           NOT two levels, since this file is packed directly under build\,
+           not build\{tfm}\. -->
+      <_Open3DSharpWrapperNativeDir>$(MSBuildThisFileDirectory)..\native\</_Open3DSharpWrapperNativeDir>
     </PropertyGroup>
     <ItemGroup Condition="Exists('$(_Open3DSharpWrapperNativeDir)')">
       <_Open3DSharpWrapperNativeFiles Include="$(_Open3DSharpWrapperNativeDir)**\*.*" />

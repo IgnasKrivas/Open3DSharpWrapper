@@ -8,10 +8,7 @@ A C# wrapper around [Open3D](https://www.open3d.org/)'s point cloud processing A
 
 ## Getting started
 
-**Using it in your own project**: `dotnet add package Open3DSharpWrapper`. The package bundles the Open3D win-x64 native runtime (`Open3DLibrary.dll`, `Open3D.dll`, `tbb12.dll`, and the resource files the viewer needs), so there's nothing else to install.
-
-> [!NOTE]
-> Prerelease versions (`-preview.<open3d-version>`, auto-published weekly against whatever Open3D release is currently latest — see [Testing](#testing) below) are never resolved by a plain `dotnet add package`; you'd need `--prerelease` or an exact version to get one. The default, stable version is only published when a [GitHub Release](https://github.com/IgnasKrivas/Open3DSharpWrapper/releases) is manually cut.
+**Using it in your own project**: `dotnet add package Open3DSharpWrapper` — see [NuGet package](#nuget-package) below for what you get and which version. Package page: [nuget.org/packages/Open3DSharpWrapper](https://www.nuget.org/packages/Open3DSharpWrapper).
 
 **Working on the wrapper itself**: no manual setup needed. Clone the repo, open `Open3DSharpWrapper.sln` in Visual Studio (or run `msbuild`/`dotnet build`), and build — the first build automatically downloads the Open3D 0.19.0 Windows devel SDK (both release and debug variants) into a repo-local `third_party\` folder and copies the runtime DLLs next to the built executable. Subsequent builds skip the download since it's already present.
 
@@ -26,6 +23,22 @@ It's idempotent — safe to re-run, and skips any variant that's already present
 
 > [!NOTE]
 > The Debug build of `Open3DLibrary` links against the **debug** Open3D binaries, and Release links against the **release** binaries — this is handled automatically by `Open3DLibrary\Open3DSdk.props`/`.targets`, don't hand-edit the include/library paths to point both configs at the same variant. Open3D's `ReadPointCloudOption` carries a `std::function` member, and linking a debug-CRT build of this project against a release Open3D.dll (or vice versa) silently corrupts that struct across the DLL boundary, causing `ReadPointCloud` to fail with "unknown file extension" even for a valid path.
+
+## NuGet package
+
+[Open3DSharpWrapper](https://www.nuget.org/packages/Open3DSharpWrapper) targets `net8.0`/`net10.0` and bundles the Open3D win-x64 native runtime (`Open3DLibrary.dll`, `Open3D.dll`, `tbb12.dll`, and the resource files the viewer needs) — `dotnet add package Open3DSharpWrapper` is the entire install, nothing else to set up. It's built from `Open3DWrapper\Open3DWrapper.csproj`; see [Open3DWrapper/README.md](Open3DWrapper/README.md) for the package's own consumer-facing docs (API surface, usage examples).
+
+There are two release channels, both automated, aimed at different audiences:
+
+| | Stable (default) | Preview |
+|---|---|---|
+| Gets it via | `dotnet add package Open3DSharpWrapper` | `dotnet add package Open3DSharpWrapper --prerelease` (or an exact version) |
+| Version looks like | `1.2.0` | `1.2.0-preview.0.19.0` |
+| Published by | Manually cutting a [GitHub Release](https://github.com/IgnasKrivas/Open3DSharpWrapper/releases) → `publish-nuget-stable.yml` | `open3d-compat-check.yml` succeeding against a *new* Open3D version → `publish-nuget-preview.yml` (weekly, or on manual dispatch) |
+| Open3D version bundled | Whatever's pinned in `Open3DLibrary\Open3DSdk.props` at release time (currently 0.19.0) | Whatever Open3D release was just validated — ahead of the pinned version, if newer |
+| Human review before publish | Yes — cutting a release is a deliberate action, and the workflow re-runs the full test suite as one more gate first | No — this is exactly what makes it automatic |
+
+The split exists because NuGet packages are immutable once pushed — they can't be unpublished if something's wrong, only deprecated after the fact. Auto-publishing the *stable* channel straight off a weekly automated check would mean a false-positive test run ships a broken package to everyone by default. Prerelease versions solve that: `dotnet add package` never resolves one on its own, so only people who explicitly opt in (to try a newer Open3D version early, or to help find problems before it becomes stable) ever see one. Both workflows authenticate to nuget.org via [Trusted Publishing](https://devblogs.microsoft.com/dotnet/enhanced-security-is-here-with-the-new-trust-publishing-on-nuget-org/) (OIDC) — no stored API key.
 
 ## Usage
 
@@ -65,7 +78,7 @@ Methods that hand back a different geometry type (`ComputeConvexHull`/`HiddenPoi
 ```powershell
 dotnet test Open3DWrapper.Tests
 ```
-CI runs this suite on every push/PR, and a second, separately-scheduled workflow re-runs it weekly against whatever Open3D release is *currently* latest — independent of the version pinned above — specifically to catch a new Open3D release breaking this wrapper before anyone hits it manually. When that weekly check passes against a new Open3D version, it also publishes a prerelease NuGet package for it automatically (see [Getting started](#getting-started)) — the stable package is unaffected and still only moves on a manual release.
+CI runs this suite on every push/PR, and a second, separately-scheduled workflow re-runs it weekly against whatever Open3D release is *currently* latest — independent of the version pinned above — specifically to catch a new Open3D release breaking this wrapper before anyone hits it manually. A successful weekly run also triggers a prerelease NuGet publish — see [NuGet package](#nuget-package) above.
 
 ## Known toolchain gotcha
 Open3D's bundled `fmt` header uses a deprecated STL extension (`stdext::checked_array_iterator`) that newer MSVC/Windows SDK versions treat as a hard error under `/sdl`. The project defines `_SILENCE_STDEXT_ARR_ITERS_DEPRECATION_WARNING` and `_SILENCE_ALL_MS_EXT_DEPRECATION_WARNINGS` to work around this — if you hit `error C4996` referencing `stdext::checked_array_iterator`, make sure those defines are still present in the project's preprocessor definitions.
