@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!-- Auto-fetch the Open3D SDK (both release and debug variants) the first
+       time it's needed. Idempotent - tools\setup-open3d.ps1 skips any variant
+       that's already present. -->
+  <Target Name="EnsureOpen3DSdk" BeforeTargets="ClCompile"
+          Condition="!Exists('$(Open3DReleaseRoot)lib\Open3D.lib') Or !Exists('$(Open3DDebugRoot)lib\Open3D.lib')">
+    <!-- .TrimEnd('\') avoids a trailing backslash landing immediately before
+         the closing quote below - Windows command-line parsing treats \" as
+         an escaped quote, which corrupts the argument. -->
+    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildThisFileDirectory)..\tools\setup-open3d.ps1&quot; -Root &quot;$(Open3DThirdPartyRoot.TrimEnd('\'))&quot; -Version &quot;$(Open3DVersion)&quot;" />
+  </Target>
+
+  <!-- Copy the Open3D runtime DLLs/resources matching this config's CRT next
+       to Open3DLibrary.dll, so the Demo (and anything else consuming OutDir)
+       doesn't need a manual copy step. -->
+  <Target Name="CopyOpen3DRuntimeDeps" AfterTargets="Link">
+    <ItemGroup>
+      <Open3DRuntimeFiles Include="$(Open3DSdkRoot)bin\Open3D.dll" />
+      <Open3DRuntimeFiles Include="$(Open3DSdkRoot)bin\tbb12_debug.dll" Condition="'$(Configuration)'=='Debug'" />
+      <Open3DRuntimeFiles Include="$(Open3DSdkRoot)bin\tbb12.dll" Condition="'$(Configuration)'!='Debug'" />
+      <Open3DResourceFiles Include="$(Open3DSdkRoot)bin\resources\**\*.*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(Open3DRuntimeFiles)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(Open3DResourceFiles)" DestinationFolder="$(OutDir)resources\%(RecursiveDir)" SkipUnchangedFiles="true" />
+  </Target>
+</Project>

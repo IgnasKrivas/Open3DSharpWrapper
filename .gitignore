@@ -350,6 +350,13 @@ ASALocalRun/
 # Local History for Visual Studio
 .localhistory/
 
+# Open3D SDK, fetched automatically by tools\setup-open3d.ps1
+third_party/
+
+# Neutral native build output, copied into each consumer's own bin by
+# Open3DWrapper\Open3DNativeDeps.targets
+/build/
+
 # BeatPulse healthcheck temp database
 healthchecksdb
 
