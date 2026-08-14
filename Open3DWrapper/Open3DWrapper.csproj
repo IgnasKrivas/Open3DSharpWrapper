@@ -17,7 +17,7 @@
          cutting a GitHub Release) override this with -p:PackageVersion=<tag>
          at pack time, so the git tag is always authoritative for what
          actually ships as stable. -->
-    <PackageVersion>1.2.0</PackageVersion>
+    <PackageVersion>1.2.1</PackageVersion>
     <Authors>Ignas Krivas</Authors>
     <Description>C# wrapper around Open3D's point cloud processing API (open3d::geometry::PointCloud) - load, transform, filter, and analyze point clouds from .NET. Bundles the Open3D native runtime for win-x64, no separate SDK download needed.</Description>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>

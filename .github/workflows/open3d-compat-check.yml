@@ -19,7 +19,13 @@ jobs:
 
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: "10.0.x"
+          # Both SDKs, not just 10.0.x - see the longer note in
+          # publish-nuget-stable.yml, which is where this was actually
+          # caught. Applied here too for consistency even though this
+          # workflow doesn't pack.
+          dotnet-version: |
+            8.0.x
+            10.0.x
 
       - name: Resolve latest Open3D release
         id: latest
