@@ -18,7 +18,7 @@ jobs:
 
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: "6.0.x"
+          dotnet-version: "10.0.x"
 
       # Keyed on the props file's contents so bumping Open3DVersion there
       # automatically invalidates the cache - no separate version to keep in

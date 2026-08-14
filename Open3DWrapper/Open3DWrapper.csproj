@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Library</OutputType>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
@@ -30,8 +30,13 @@
 
   <ItemGroup>
     <None Include="..\LICENSE" Pack="true" PackagePath="\" />
-    <None Include="..\README.md" Pack="true" PackagePath="\" />
-    <None Include="Open3DSharpWrapper.targets" Pack="true" PackagePath="build\net6.0\Open3DSharpWrapper.targets" />
+    <None Include="README.md" Pack="true" PackagePath="\" />
+    <!-- TFM-agnostic path (build\{packageid}.targets, no per-framework
+         subfolder) - this target just copies files and has no
+         framework-specific logic, so it should auto-import for every
+         consuming project regardless of which of our TargetFrameworks (or
+         any other) it uses. -->
+    <None Include="Open3DSharpWrapper.targets" Pack="true" PackagePath="build\Open3DSharpWrapper.targets" />
   </ItemGroup>
 
   <!-- Native payload, from a Release|x64 build of Open3DLibrary (see

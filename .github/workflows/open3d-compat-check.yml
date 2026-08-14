@@ -19,7 +19,7 @@ jobs:
 
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: "6.0.x"
+          dotnet-version: "10.0.x"
 
       - name: Resolve latest Open3D release
         id: latest

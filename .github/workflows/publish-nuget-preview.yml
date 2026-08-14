@@ -29,7 +29,7 @@ jobs:
 
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: "6.0.x"
+          dotnet-version: "10.0.x"
 
       - name: Resolve latest Open3D release
         id: latest
@@ -56,10 +56,8 @@ jobs:
         id: preview_version
         shell: pwsh
         run: |
-          # Read PackageVersion straight from the csproj via regex rather than
-          # `dotnet msbuild -getProperty` - that flag needs MSBuild 17.8+, and
-          # this workflow deliberately pins the older .NET 6 SDK (matching the
-          # project's TargetFramework), whose bundled MSBuild predates it.
+          # Read PackageVersion straight from the csproj via regex - simpler
+          # and SDK-version-agnostic vs. `dotnet msbuild -getProperty`.
           $csproj = Get-Content Open3DWrapper/Open3DWrapper.csproj -Raw
           if ($csproj -notmatch '<PackageVersion>([^<]+)</PackageVersion>') {
             throw "Could not find <PackageVersion> in Open3DWrapper/Open3DWrapper.csproj"
